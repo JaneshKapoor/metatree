@@ -5,7 +5,7 @@ A small, fast Rust CLI that puts the catalog at your fingertips. Designed to be 
 ## Install
 
 ```bash
-git clone https://github.com/your-org/metatree
+git clone https://github.com/JaneshKapoor/metatree
 cd metatree/cli
 cargo install --path .
 ```

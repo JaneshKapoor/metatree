@@ -175,7 +175,7 @@ impl OmClient {
     pub fn quality_for(&self, fqn: &str) -> Result<Value> {
         let qs = vec![
             ("entityLink", format!("<#E::table::{}>", fqn)),
-            ("fields", "tests,testCaseResults".to_string()),
+            ("fields", "tests".to_string()),
         ];
         Ok(self
             .get_json::<Value>("/api/v1/dataQuality/testSuites", &qs)?

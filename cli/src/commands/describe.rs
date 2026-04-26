@@ -37,7 +37,7 @@ pub fn run(args: Args, overrides: Overrides) -> Result<()> {
     let cfg = resolve(overrides)?;
     let client = OmClient::new(cfg.host, cfg.token)?;
     let table_value = client
-        .table_by_fqn(&args.fqn, "owners,tags,columns,testSuite,customProperties")?
+        .table_by_fqn(&args.fqn, "owners,tags,columns,testSuite,extension")?
         .ok_or_else(|| anyhow!("table `{}` not found in OpenMetadata catalog", args.fqn))?;
 
     if args.json {

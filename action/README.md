@@ -22,7 +22,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v45
 
-      - uses: your-org/metatree/action@v1
+      - uses: JaneshKapoor/metatree/action@v1
         with:
           openmetadata-host:  ${{ secrets.OPENMETADATA_HOST }}
           openmetadata-token: ${{ secrets.OPENMETADATA_JWT_TOKEN }}

@@ -172,7 +172,18 @@ metatree/
 | `cd vscode-extension && npm test` | **8 passed** | yes (pure Node) |
 | `cargo build` | clean (`#![deny(warnings)]` enforced) | n/a |
 | `npx vsce package` | `metatree-vscode.vsix` (40.64 KB, 35 files) | n/a |
-| Live `ometa` against the sandbox | TLS handshake + auth + 401 path verified end-to-end | no |
+
+### Live verification against the local stack
+
+After `make local-up && make local-jwt && python scripts/seed_local_sample.py`:
+
+| Live test | Result |
+|---|---|
+| `ometa search orders` | returns 2 hits: `orders` (score 52.7) and `daily_revenue` (14.5) |
+| `ometa describe sample_mysql.demo_db.public.orders` | renders 5-column table (id/customer_id/total_amount/status/created_at) with description |
+| `ometa lineage sample_mysql.demo_db.public.orders --depth 2` | ASCII tree shows `downstream → daily_revenue` |
+| `ometa quality sample_mysql.demo_db.public.orders` | "No data-quality tests found" (no DQ tests seeded) |
+| Action's `impact_analysis.py` on a SQL file with `FROM orders JOIN customers …` | report identifies `orders → daily_revenue` and `customers → daily_revenue` correctly |
 
 ## Development
 

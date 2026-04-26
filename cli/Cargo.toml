@@ -6,7 +6,7 @@ description = "MetaTree CLI for OpenMetadata: search, describe, lineage, quality
 license = "Apache-2.0"
 authors = ["MetaTree contributors"]
 readme = "README.md"
-repository = "https://github.com/your-org/metatree"
+repository = "https://github.com/JaneshKapoor/metatree"
 
 [[bin]]
 name = "ometa"
