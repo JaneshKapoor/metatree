@@ -1,0 +1,64 @@
+name: "MetaTree Impact Analysis"
+description: "Analyze the downstream impact of schema/SQL/dbt changes against an OpenMetadata catalog and post the report as a PR comment."
+author: "MetaTree contributors"
+branding:
+  icon: "git-branch"
+  color: "green"
+
+inputs:
+  openmetadata-host:
+    description: "OpenMetadata API base URL (e.g. https://sandbox.open-metadata.org/api)"
+    required: true
+  openmetadata-token:
+    description: "JWT token for authentication"
+    required: true
+  changed-files:
+    description: "Space- or newline-separated list of changed file paths"
+    required: true
+  fail-on-impact:
+    description: "Fail the action if any downstream impact is found"
+    required: false
+    default: "false"
+  comment-on-pr:
+    description: "Post the impact report as a PR comment"
+    required: false
+    default: "true"
+  github-token:
+    description: "GitHub token used to post PR comments"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  impact-found:
+    description: "true if downstream impact was detected, false otherwise"
+    value: ${{ steps.metatree.outputs.impact-found }}
+  report-path:
+    description: "Filesystem path to the generated Markdown report"
+    value: ${{ steps.metatree.outputs.report-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install MetaTree dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run MetaTree impact analysis
+      id: metatree
+      shell: bash
+      env:
+        OPENMETADATA_HOST: ${{ inputs.openmetadata-host }}
+        OPENMETADATA_JWT_TOKEN: ${{ inputs.openmetadata-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        METATREE_CHANGED_FILES: ${{ inputs.changed-files }}
+        METATREE_FAIL_ON_IMPACT: ${{ inputs.fail-on-impact }}
+        METATREE_COMMENT_ON_PR: ${{ inputs.comment-on-pr }}
+      run: |
+        python ${{ github.action_path }}/src/impact_analysis.py

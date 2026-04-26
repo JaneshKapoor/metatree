@@ -1,0 +1,7 @@
+requests>=2.31,<3
+PyYAML>=6.0,<7
+
+# Test-only deps (kept here so `pip install -r requirements.txt` is a one-shot
+# install for both runtime and `pytest`). The action runtime ignores them.
+pytest>=8.0,<9
+responses>=0.25,<1

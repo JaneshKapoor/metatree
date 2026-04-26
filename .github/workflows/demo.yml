@@ -1,0 +1,40 @@
+name: MetaTree demo
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  impact-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate a sample changed SQL file
+        run: |
+          mkdir -p demo
+          cat > demo/orders_revenue.sql <<'SQL'
+          -- Demo schema change: a downstream report joining orders and customers.
+          SELECT *
+          FROM orders
+          JOIN customers ON orders.customer_id = customers.id
+          WHERE orders.status = 'completed';
+          SQL
+          echo "demo/orders_revenue.sql" > .changed-files
+
+      - name: Run MetaTree impact analysis against the public sandbox
+        uses: ./action
+        with:
+          openmetadata-host:  ${{ secrets.OPENMETADATA_HOST || 'https://sandbox.open-metadata.org/api' }}
+          # The sandbox ingestion-bot JWT is rotated periodically. Until the
+          # OPENMETADATA_JWT_TOKEN secret is set on the repo, copy the current
+          # token from https://sandbox.open-metadata.org → Settings → Bots →
+          # ingestion-bot → JWT Token, and add it as a repo secret.
+          openmetadata-token: ${{ secrets.OPENMETADATA_JWT_TOKEN }}
+          changed-files: demo/orders_revenue.sql
+          fail-on-impact: "false"
+          comment-on-pr: "true"

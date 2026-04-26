@@ -1,0 +1,30 @@
+.env
+.env.local
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Rust
+cli/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Node / VS Code extension
+vscode-extension/node_modules/
+vscode-extension/out/
+vscode-extension/*.vsix
+vscode-extension/.vscode-test/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

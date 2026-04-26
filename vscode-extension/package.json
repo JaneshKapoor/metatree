@@ -1,0 +1,111 @@
+{
+  "name": "metatree-vscode",
+  "displayName": "MetaTree — OpenMetadata for Developers",
+  "description": "Hover any table or column for OpenMetadata context, walk lineage in an interactive panel, and watch DQ status in your sidebar.",
+  "publisher": "metatree",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Data Science",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onLanguage:sql",
+    "onLanguage:yaml",
+    "workspaceContains:**/*.sql",
+    "workspaceContains:dbt_project.yml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "MetaTree",
+      "properties": {
+        "metatree.host": {
+          "type": "string",
+          "default": "",
+          "description": "OpenMetadata API base URL (e.g. https://sandbox.open-metadata.org/api)."
+        },
+        "metatree.token": {
+          "type": "string",
+          "default": "",
+          "description": "OpenMetadata JWT token (Settings -> Bots -> ingestion-bot).",
+          "markdownDescription": "OpenMetadata JWT token. Find it under **Settings → Bots → ingestion-bot**."
+        },
+        "metatree.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Master switch for all MetaTree features."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "metatree.showLineage",
+        "title": "MetaTree: Show Lineage for symbol under cursor"
+      },
+      {
+        "command": "metatree.refreshSidebar",
+        "title": "MetaTree: Refresh Sidebar",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "metatree.openInBrowser",
+        "title": "MetaTree: Open current entity in OpenMetadata"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "metatree.showLineage",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "metatree",
+          "title": "MetaTree",
+          "icon": "$(database)"
+        }
+      ]
+    },
+    "views": {
+      "metatree": [
+        {
+          "id": "metatree.assetsView",
+          "name": "Assets"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "metatree.refreshSidebar",
+          "when": "view == metatree.assetsView",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runUnit.js",
+    "package": "vsce package --out metatree-vscode.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  }
+}
