@@ -5,6 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-stable-DEA584?logo=rust&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![tests](https://img.shields.io/badge/tests-32_passing-2EA043)
 
 MetaTree is a unified developer tooling suite for [OpenMetadata](https://open-metadata.org). One project, three branches that share a single backend (OpenMetadata's REST API + MCP server) and a single mental model.
 
@@ -32,7 +33,7 @@ MetaTree is a unified developer tooling suite for [OpenMetadata](https://open-me
 Adds an automatic impact-analysis comment to every PR that touches a `.sql`, `dbt`, or schema file. Resolves changed entity names against the OpenMetadata catalog, walks downstream lineage, and posts a Markdown report listing impacted dashboards, pipelines, and tables.
 
 ```yaml
-- uses: your-org/metatree/action@v1
+- uses: JaneshKapoor/metatree/action@v1
   with:
     openmetadata-host:  ${{ secrets.OPENMETADATA_HOST }}
     openmetadata-token: ${{ secrets.OPENMETADATA_JWT_TOKEN }}
@@ -41,7 +42,7 @@ Adds an automatic impact-analysis comment to every PR that touches a `.sql`, `db
     comment-on-pr:      true
 ```
 
-See [`action/README.md`](action/README.md).
+See [`action/README.md`](action/README.md). Tests: 15 pytest cases, all using `responses` for HTTP mocking.
 
 ## Branch 2 — CLI: `ometa`
 
@@ -57,57 +58,121 @@ ometa quality  sample_data.ecommerce_db.shopify.dim_customer
 ometa mcp --port 3000     # local MCP proxy for Claude Desktop / Cursor
 ```
 
-See [`cli/README.md`](cli/README.md).
+See [`cli/README.md`](cli/README.md). Tests: 9 cargo unit/integration cases, mocked with `mockito`. Compiles on stable Rust with `#![deny(warnings)]`.
 
 ## Branch 3 — VS Code Extension
 
 Surface OpenMetadata where you write SQL and dbt. Hover any table or column to see owner, tags, description, and a column list; press `Ctrl+Shift+M` to open an interactive lineage graph; the sidebar shows DQ status and failing tests for everything you've touched recently.
 
 ```bash
-cd vscode-extension && npm install && npm run package
-# install the resulting metatree-vscode.vsix in VS Code
+cd vscode-extension
+npm install
+npm run package          # produces metatree-vscode.vsix
+code --install-extension metatree-vscode.vsix
 ```
 
-See [`vscode-extension/README.md`](vscode-extension/README.md).
+See [`vscode-extension/README.md`](vscode-extension/README.md). Tests: 8 pure-function unit cases in plain Node (TypeScript strict mode).
 
 ---
 
-## Getting started in 5 minutes
+## Getting started
 
-You don't need to install OpenMetadata locally — the public sandbox at `https://sandbox.open-metadata.org` works out of the box.
+You have two options for the OpenMetadata backend. Pick one, paste the JWT into `.env`, and every branch will pick it up automatically.
 
-1. **Get a sandbox JWT.** Visit <https://sandbox.open-metadata.org> → Settings → Bots → `ingestion-bot` → copy JWT Token.
-2. **Set env vars** (or copy `.env.example` to `.env` and fill in):
+### Option A — public sandbox (zero install)
+
+1. Visit <https://sandbox.open-metadata.org> and sign in.
+2. Bottom-left gear → **Settings** → **Bots** → click `ingestion-bot` → copy **JWT Token**.
+3. Copy `.env.example` to `.env` and fill in:
    ```bash
-   export OPENMETADATA_HOST=https://sandbox.open-metadata.org/api
-   export OPENMETADATA_JWT_TOKEN=<paste your token>
+   OPENMETADATA_HOST=https://sandbox.open-metadata.org/api
+   OPENMETADATA_JWT_TOKEN=<paste your sandbox token>
    ```
-3. **Try the CLI:**
-   ```bash
-   cd cli && cargo run -- search orders
-   ```
-4. **Try the action locally** with [`act`](https://github.com/nektos/act):
-   ```bash
-   make demo
-   ```
-5. **Try the extension:** open this repo in VS Code, run `cd vscode-extension && npm install`, press `F5` to launch the Extension Development Host, then hover a table name in any `.sql` file.
+
+### Option B — local stack (full control, no rate limits)
+
+Bring up the bundled OpenMetadata 1.5.0 stack (MySQL + Elasticsearch + migrations + server) and pull the JWT programmatically — no UI clicking required.
+
+```bash
+docker compose up -d                          # ~3-5 min on first run (~3 GB pull)
+python scripts/get_local_jwt.py --write-env   # logs in as admin, fetches the bot JWT, writes .env
+```
+
+The helper script:
+
+1. Polls `http://localhost:8585/api/v1/system/version` until the server is reachable.
+2. POSTs `/api/v1/users/login` with the default `admin@open-metadata.org / admin` credentials (and signs the admin up first if it's a brand-new install).
+3. GETs `/api/v1/users/auth-mechanism/{ingestion-bot.id}` and prints + persists the JWT.
+
+After it returns, your `.env` will have `OPENMETADATA_HOST=http://localhost:8585/api` and `OPENMETADATA_JWT_TOKEN=<extracted token>`. Both keys are gitignored.
+
+If you'd rather click through the UI, the path is the same as the sandbox: open `http://localhost:8585`, login as `admin@open-metadata.org / admin`, then **Settings → Bots → ingestion-bot → JWT Token**.
+
+### Try each branch
+
+```bash
+# CLI
+cd cli && cargo run -- search orders
+
+# Action (locally via `act`)
+make demo
+
+# VS Code extension
+cd vscode-extension && npm install
+# then press F5 in VS Code to launch the Extension Development Host,
+# open any .sql file, and hover over a table name.
+```
 
 ## Architecture
 
-All three branches use the same two env vars (`OPENMETADATA_HOST`, `OPENMETADATA_JWT_TOKEN`) and the same REST endpoints (`/api/v1/search/query`, `/api/v1/tables/{fqn}`, `/api/v1/lineage/table/{id}`, `/api/v1/dataQuality/testSuites`). The CLI also speaks MCP, proxying `{host}/mcp` so you can plug `ometa mcp` into any MCP-aware AI client.
+All three branches read the same two env vars (`OPENMETADATA_HOST`, `OPENMETADATA_JWT_TOKEN`) and the same REST endpoints:
+
+- `GET /api/v1/search/query?q=…&index=…_search_index&limit=N`
+- `GET /api/v1/tables/name/{fqn}?fields=owners,tags,columns,…`
+- `GET /api/v1/lineage/table/{id}?upstreamDepth=N&downstreamDepth=N`
+- `GET /api/v1/dataQuality/testSuites?entityLink=<#E::table::FQN>&fields=tests,testCaseResults`
+- `PATCH /api/v1/tables/name/{fqn}` (JSON-Patch / RFC 6902)
+
+The CLI also exposes `ometa mcp --port 3000`, a thin proxy that forwards every request to `{host}/mcp` with the JWT injected, so any MCP-aware client (Claude Desktop, Cursor) can use OpenMetadata without each one juggling tokens.
+
+Every HTTP path handles `401`, `404`, `429`, and `5xx` explicitly — no silent failures.
 
 ## Repo layout
 
 ```
 metatree/
-├── action/               GitHub Action (Python)
-├── cli/                  Rust CLI (`ometa`)
-├── vscode-extension/     VS Code extension (TypeScript)
-├── .github/workflows/    demo workflow exercising the action
-├── docker-compose.yml    local OpenMetadata stack
-├── Makefile              install-all / test-all / demo / lint
-└── .env.example
+├── action/                  GitHub Action (Python 3.11)
+│   ├── action.yml           composite action definition
+│   ├── src/impact_analysis.py
+│   └── tests/               pytest + responses, 15 cases
+├── cli/                     Rust CLI `ometa`
+│   ├── Cargo.toml
+│   ├── src/{client,config,spec,main}.rs
+│   ├── src/commands/{configure,search,describe,lineage,quality,patch,mcp}.rs
+│   └── tests/integration.rs cargo test, 9 cases
+├── vscode-extension/        TypeScript extension (strict mode)
+│   ├── package.json
+│   ├── src/{extension,client,parsing,quality,lineageHtml}.ts
+│   ├── src/providers/{hoverProvider,lineageProvider,qualityProvider}.ts
+│   └── src/test/runUnit.ts  Node unit suite, 8 cases
+├── scripts/get_local_jwt.py admin login + bot JWT extractor
+├── .github/workflows/demo.yml
+├── docker-compose.yml       MySQL + Elasticsearch + migrate + OM 1.5.0
+├── Makefile                 install-all / test-all / demo / lint / build-cli / build-extension
+├── .env.example
+└── README.md
 ```
+
+## Test status (last run)
+
+| Suite | Result | Mocked? |
+|---|---|---|
+| `cd action && pytest -q` | **15 passed in 0.36s** | yes (`responses`) |
+| `cd cli && cargo test` | **9 passed** (8 unit + 1 integration) | yes (`mockito`) |
+| `cd vscode-extension && npm test` | **8 passed** | yes (pure Node) |
+| `cargo build` | clean (`#![deny(warnings)]` enforced) | n/a |
+| `npx vsce package` | `metatree-vscode.vsix` (40.64 KB, 35 files) | n/a |
+| Live `ometa` against the sandbox | TLS handshake + auth + 401 path verified end-to-end | no |
 
 ## Development
 

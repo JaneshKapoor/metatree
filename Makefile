@@ -1,4 +1,4 @@
-.PHONY: install-all test-all demo build-cli build-extension lint clean help
+.PHONY: install-all test-all demo build-cli build-extension lint clean help local-up local-down local-jwt
 
 PYTHON ?= python
 PIP    ?= $(PYTHON) -m pip
@@ -11,6 +11,9 @@ help:
 	@echo "  build-cli        cargo build --release for the CLI (output: cli/target/release/ometa)"
 	@echo "  build-extension  vsce package for the VS Code extension"
 	@echo "  lint             ruff (Python), cargo clippy (Rust), eslint (TypeScript)"
+	@echo "  local-up         start the bundled OpenMetadata 1.5.0 stack via docker compose"
+	@echo "  local-down       stop and remove the local OpenMetadata stack"
+	@echo "  local-jwt        login as admin and write the ingestion-bot JWT into .env"
 	@echo "  clean            remove build artifacts"
 
 install-all:
@@ -39,6 +42,15 @@ lint:
 	-ruff check action/
 	-cd cli && cargo clippy --all-targets -- -D warnings
 	-cd vscode-extension && npm run lint
+
+local-up:
+	docker compose up -d
+
+local-down:
+	docker compose down -v
+
+local-jwt:
+	$(PYTHON) scripts/get_local_jwt.py --write-env
 
 clean:
 	rm -rf cli/target vscode-extension/node_modules vscode-extension/out vscode-extension/*.vsix
