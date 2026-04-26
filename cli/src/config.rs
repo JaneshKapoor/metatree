@@ -87,6 +87,14 @@ pub fn resolve(overrides: Overrides) -> Result<Resolved> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    // Serialize env-mutating tests so cargo test's parallel runner doesn't
+    // interleave set_var/remove_var between cases.
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     fn clear_env() {
         env::remove_var(ENV_HOST);
@@ -95,6 +103,7 @@ mod tests {
 
     #[test]
     fn cli_overrides_win() {
+        let _guard = env_lock().lock().unwrap_or_else(|e| e.into_inner());
         clear_env();
         let r = resolve(Overrides {
             host: Some("https://h/api/".into()),
@@ -107,6 +116,7 @@ mod tests {
 
     #[test]
     fn env_used_when_no_overrides() {
+        let _guard = env_lock().lock().unwrap_or_else(|e| e.into_inner());
         clear_env();
         env::set_var(ENV_HOST, "https://envhost/api");
         env::set_var(ENV_TOKEN, "envtok");
@@ -118,6 +128,7 @@ mod tests {
 
     #[test]
     fn missing_host_is_a_clear_error() {
+        let _guard = env_lock().lock().unwrap_or_else(|e| e.into_inner());
         clear_env();
         let err = resolve(Overrides::default()).unwrap_err();
         let msg = format!("{err}");

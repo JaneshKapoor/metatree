@@ -6,6 +6,7 @@ use crate::client::OmClient;
 use anyhow::Result;
 use serde_json::Value;
 
+#[allow(dead_code)] // hook for future code-generated subcommands
 pub fn fetch_openapi(client: &OmClient) -> Result<Option<Value>> {
     client.get_json::<Value>("/api/v1/system/version", &[])
 }
